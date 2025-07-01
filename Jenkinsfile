@@ -1,38 +1,37 @@
 pipeline {
   agent any
-  environment {
-    IMAGE_NAME = "simple-web"
-    IMAGE_TAG  = "${env.BUILD_NUMBER}"
-  }
+
   stages {
     stage('Checkout') {
       steps {
+        // Clona este mismo repo (simple-web)
         checkout scm
       }
     }
-    stage('Build Image') {
+
+    stage('Build & Deploy Web') {
       steps {
-        script {
-          docker.build("${IMAGE_NAME}:${IMAGE_TAG}")
-        }
-      }
-    }
-    stage('Deploy') {
-      steps {
-        script {
-          sh '''
-            if docker ps -a --format "{{.Names}}" | grep -q "^${IMAGE_NAME}\$"; then
-              docker rm -f ${IMAGE_NAME}
-            fi
-          '''
-          docker.image("${IMAGE_NAME}:${IMAGE_TAG}")
-                .run("-d --name ${IMAGE_NAME} -p 8081:80")
-        }
+        // Construye la imagen y arranca el contenedor
+        sh '''
+          # Detiene y elimina el contenedor anterior si existe
+          docker rm -f simple-web || true
+
+          # Construye la imagen desde el Dockerfile de este directorio
+          docker build -t simple-web:latest .
+
+          # Arranca la web en segundo plano exponiendo el puerto 8081
+          docker run -d --name simple-web -p 8081:80 simple-web:latest
+        '''
       }
     }
   }
+
   post {
-    success { echo "✅ Despliegue exitoso: ${IMAGE_NAME}:${IMAGE_TAG}" }
-    failure { echo "❌ El pipeline falló" }
+    success {
+      echo "✅ simple-web está corriendo en http://localhost:8081"
+    }
+    failure {
+      echo "❌ Error al levantar simple-web"
+    }
   }
 }
