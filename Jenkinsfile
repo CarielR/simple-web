@@ -2,24 +2,26 @@ pipeline {
   agent any
 
   stages {
-    stage('Checkout') {
+    stage('Clonar repositorio') {
       steps {
-        // Clona este mismo repo (simple-web)
-        checkout scm
+        // Baja tu código de GitHub
+        git 'https://github.com/CarielR/simple-web.git'
       }
     }
 
-    stage('Build & Deploy Web') {
+    stage('Construir imagen') {
       steps {
-        // Construye la imagen y arranca el contenedor
+        // Construye la imagen desde el Dockerfile en la raíz
+        sh 'docker build -t simple-web:latest .'
+      }
+    }
+
+    stage('Desplegar') {
+      steps {
+        // Para y elimina el contenedor anterior (si existe), luego levanta el nuevo
         sh '''
-          # Detiene y elimina el contenedor anterior si existe
-          docker rm -f simple-web || true
-
-          # Construye la imagen desde el Dockerfile de este directorio
-          docker build -t simple-web:latest .
-
-          # Arranca la web en segundo plano exponiendo el puerto 8081
+          docker stop simple-web || true
+          docker rm simple-web  || true
           docker run -d --name simple-web -p 8081:80 simple-web:latest
         '''
       }
@@ -28,10 +30,10 @@ pipeline {
 
   post {
     success {
-      echo "✅ simple-web está corriendo en http://localhost:8081"
+      echo "✅ simple-web levantada en http://localhost:8081"
     }
     failure {
-      echo "❌ Error al levantar simple-web"
+      echo "❌ Falló el despliegue de simple-web"
     }
   }
 }
