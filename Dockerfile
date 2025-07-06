@@ -6,6 +6,7 @@ LABEL maintainer="tu-email@dominio.com"
 
 # Copiamos el HTML al directorio raíz de Nginx
 COPY index.html /usr/share/nginx/html/index.html
+COPY style.css   /usr/share/nginx/html/style.css
 
 # Exponemos el puerto 80 (el que Nginx usa por defecto)
 EXPOSE 80
