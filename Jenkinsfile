@@ -1,28 +1,38 @@
 pipeline {
   agent any
 
+  environment {
+    // Nombre de la imagen y del contenedor
+    IMAGE_NAME = "simple-web"
+    IMAGE_TAG  = "latest"
+    CONTAINER  = "simple-web"
+    PORT       = "8081"
+  }
+
   stages {
-    stage('Clonar repositorio') {
+    stage('Checkout') {
       steps {
-        // Baja tu código de GitHub
-        git 'https://github.com/CarielR/simple-web.git'
+        // Usa la misma configuración SCM del job (URL y rama main)
+        checkout scm
       }
     }
 
-    stage('Construir imagen') {
+    stage('Build & Deploy') {
       steps {
-        // Construye la imagen desde el Dockerfile en la raíz
-        sh 'docker build -t simple-web:latest .'
-      }
-    }
-
-    stage('Desplegar') {
-      steps {
-        // Para y elimina el contenedor anterior (si existe), luego levanta el nuevo
+        // Construye y reinicia tu contenedor web
         sh '''
-          docker stop simple-web || true
-          docker rm simple-web  || true
-          docker run -d --name simple-web -p 8081:80 simple-web:latest
+          # Detiene y elimina el contenedor previo si existe
+          docker stop $CONTAINER || true
+          docker rm   $CONTAINER || true
+
+          # Construye la imagen desde el Dockerfile de este directorio
+          docker build -t $IMAGE_NAME:$IMAGE_TAG .
+
+          # Inicia la web en background, mapeando el puerto 80 del contenedor al 8081 del host
+          docker run -d \
+            --name $CONTAINER \
+            -p $PORT:80 \
+            $IMAGE_NAME:$IMAGE_TAG
         '''
       }
     }
@@ -30,10 +40,10 @@ pipeline {
 
   post {
     success {
-      echo "✅ simple-web levantada en http://localhost:8081"
+      echo "✅ $IMAGE_NAME desplegado en http://localhost:$PORT"
     }
     failure {
-      echo "❌ Falló el despliegue de simple-web"
+      echo "❌ Falló el despliegue de $IMAGE_NAME"
     }
   }
 }
